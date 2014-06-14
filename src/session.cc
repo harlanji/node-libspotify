@@ -502,6 +502,30 @@ static Handle<Value> Session_Preferred_Offline_Bitrate(const Arguments& args) {
 }
 
 
+static Handle<Value> Session_Private_Session(const Arguments& args) {
+  HandleScope scope;
+
+  // check parameters sanity
+  assert(args.Length() >= 2);
+  assert(args[0]->IsObject());
+
+  ObjectHandle<sp_session>* session = ObjectHandle<sp_session>::Unwrap(args[0]);
+
+  if (args.Length() >= 2 && args[0]->IsBoolean()) {
+    bool isPrivate = args[0]->ToBoolean()->BooleanValue();
+
+    sp_error error = sp_session_set_private_session(session->pointer, isPrivate);
+
+    NSP_THROW_IF_ERROR(error);
+
+    return scope.Close(Undefined());
+  } else {
+    bool isPrivate = sp_session_is_private_session(session->pointer);
+
+    return scope.Close(Boolean::New(isPrivate));
+  }
+}
+
 /**
  * JS session_logout implementation
  */
@@ -573,4 +597,6 @@ void nsp::init_session(Handle<Object> target) {
 
   NODE_SET_METHOD(target, "session_preferred_bitrate", Session_Preferred_Bitrate);
   NODE_SET_METHOD(target, "session_preferred_offline_bitrate", Session_Preferred_Offline_Bitrate);
+
+  NODE_SET_METHOD(target, "session_private_session", Session_Private_Session);
 }
