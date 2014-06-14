@@ -425,6 +425,83 @@ static Handle<Value> Session_Login(const Arguments& args) {
   return scope.Close(Undefined());
 }
 
+static sp_bitrate int_to_bitrate(int rawBitrate) {
+  sp_bitrate bitrate;
+  switch (rawBitrate) {
+    case 96:
+      bitrate = SP_BITRATE_96k;
+      break;
+    case 320:
+      bitrate = SP_BITRATE_320k;
+      break;
+    case 160:
+    default:
+      bitrate = SP_BITRATE_160k;
+  }
+
+  return bitrate;
+}
+
+/*
+ * JS session_login implementation. This function unwraps the session from the given object
+ * and calls sp_session_login with the given credentials
+ * TODO support for remember_me and credential blobs
+ */
+static Handle<Value> Session_Preferred_Bitrate(const Arguments& args) {
+  HandleScope scope;
+
+  // check parameters sanity
+  assert(args.Length() == 2);
+  assert(args[0]->IsObject());
+  assert(args[1]->IsNumber());
+
+  // unwrap the session from the given object
+  ObjectHandle<sp_session>* session = ObjectHandle<sp_session>::Unwrap(args[0]);
+  sp_bitrate bitrate = int_to_bitrate(args[1]->ToNumber()->Int32Value());
+
+  // actually call sp_session_login
+  sp_error error = sp_session_preferred_bitrate(
+      session->pointer,
+      bitrate
+      );
+  NSP_THROW_IF_ERROR(error);
+
+  return scope.Close(Undefined());
+}
+
+/*
+ * JS session_login implementation. This function unwraps the session from the given object
+ * and calls sp_session_login with the given credentials
+ * TODO support for remember_me and credential blobs
+ */
+static Handle<Value> Session_Preferred_Offline_Bitrate(const Arguments& args) {
+  HandleScope scope;
+
+  // check parameters sanity
+  assert(args.Length() >= 2);
+  assert(args[0]->IsObject());
+  assert(args[1]->IsNumber());
+
+  ObjectHandle<sp_session>* session = ObjectHandle<sp_session>::Unwrap(args[0]);
+  sp_bitrate bitrate = int_to_bitrate(args[1]->ToNumber()->Int32Value());
+
+  bool allowResync = false;
+  if (args.Length() > 2 && args[2]->IsBoolean()) {
+    allowResync = args[2]->ToBoolean()->BooleanValue();
+  }
+
+  // actually call sp_session_login
+  sp_error error = sp_session_preferred_offline_bitrate(
+      session->pointer,
+      bitrate,
+      allowResync
+      );
+  NSP_THROW_IF_ERROR(error);
+
+  return scope.Close(Undefined());
+}
+
+
 /**
  * JS session_logout implementation
  */
@@ -493,4 +570,7 @@ void nsp::init_session(Handle<Object> target) {
   NODE_SET_METHOD(target, "session_logout", Session_Logout);
   NODE_SET_METHOD(target, "session_process_events", Session_Process_Events);
   NODE_SET_METHOD(target, "session_playlistcontainer", Session_PlaylistContainer);
+
+  NODE_SET_METHOD(target, "session_preferred_bitrate", Session_Preferred_Bitrate);
+  NODE_SET_METHOD(target, "session_preferred_offline_bitrate", Session_Preferred_Offline_Bitrate);
 }
